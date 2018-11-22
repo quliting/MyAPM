@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,7 +15,7 @@ namespace MyAPM
     public class Program
     {
         static string file = Environment.CurrentDirectory + "/download/";
-        static byte[] buffer = new byte[1024 ];
+        static byte[] buffer = new byte[1024];
 
         static string url = ConfigurationManager.AppSettings["urlPath"];
         private static FileStream fileStream;
@@ -28,8 +30,13 @@ namespace MyAPM
         static void Main(string[] args)
         {
             Init();
-            DownloadFileAsync(url);
+            //DownloadFileAsync(url);
+
+            DownLoadFilesAsync(url);
+            Console.ReadKey();
         }
+
+        #region APM
 
 
         public static void DownloadFileAsync(string url)
@@ -83,5 +90,41 @@ namespace MyAPM
 
             }
         }
+
+        #endregion
+
+
+        #region Async Await  
+
+        public static async void DownLoadFilesAsync(string url)
+        {
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            HttpClient httpClient = new HttpClient();
+            var stream = await httpClient.GetStreamAsync(url);
+
+            while (true)
+            {
+                int size = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (size > 0)
+                {
+                    await fileStream.WriteAsync(buffer, 0, size);
+                }
+                else
+                {
+                    fileStream.Close();
+                    Console.WriteLine("完成 await");
+                    stopwatch.Stop();
+
+                    Console.WriteLine(stopwatch.ElapsedMilliseconds);
+                    return;
+                }
+            }
+
+
+
+        }
+        #endregion
     }
 }
